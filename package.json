@@ -146,5 +146,9 @@
       "admin/",
       "packages/"
     ]
+  },
+  "dependencies": {
+    "mongodb": "^6.18.0",
+    "mongoose": "^8.17.1"
   }
 }
