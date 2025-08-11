@@ -7,14 +7,11 @@ const {
   updateGroupHandler,
   deleteGroupHandler,
   getGroupStatsHandler,
-} = require('~/server/controllers/GroupController');
-const {
+  getAvailableUsersHandler,
   getGroupMembersHandler,
   addUserToGroupHandler,
   removeUserFromGroupHandler,
-  // bulkAddUsersToGroupHandler,
-  getUserGroupsHandler,
-} = require('~/server/controllers/GroupMembershipController');
+} = require('~/server/controllers/GroupController');
 const requireJwtAuth = require('~/server/middleware/requireJwtAuth');
 const { requireAdmin } = require('~/server/middleware/roles');
 // const {
@@ -71,6 +68,9 @@ router.get('/test-db', async (req, res) => {
 // Stats endpoint (before parameterized routes)
 router.get('/stats', getGroupStatsHandler);
 
+// Available users endpoint (before parameterized routes)
+router.get('/users/available', getAvailableUsersHandler);
+
 // Group CRUD operations (Admin only) - Enable step by step
 router.get('/', getGroupsHandler);
 router.get('/:id', getGroupHandler);
@@ -79,12 +79,9 @@ router.put('/:id', updateGroupHandler);
 router.delete('/:id', deleteGroupHandler);
 
 // Group membership management (Admin only) - Enable step by step
-router.get('/:groupId/members', getGroupMembersHandler);
-router.post('/:groupId/members/:userId', addUserToGroupHandler);
-router.delete('/:groupId/members/:userId', removeUserFromGroupHandler);
-// router.post('/:groupId/members/bulk', requireAdmin, validateBulkGroupAssignment, bulkAddUsersToGroupHandler);
-
-// User-specific routes (Admin only for now, could be extended for user self-service)
-router.get('/users/:userId/groups', getUserGroupsHandler);
+router.get('/:id/members', getGroupMembersHandler);
+router.post('/:id/members', addUserToGroupHandler);
+router.delete('/:id/members/:userId', removeUserFromGroupHandler);
+// router.post('/:id/members/bulk', requireAdmin, validateBulkGroupAssignment, bulkAddUsersToGroupHandler);
 
 module.exports = router;

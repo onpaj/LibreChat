@@ -4,7 +4,11 @@ const {
   getGroup, 
   createGroup, 
   updateGroup, 
-  deleteGroup 
+  deleteGroup,
+  getAvailableUsers,
+  getGroupMembers,
+  addUserToGroup,
+  removeUserFromGroup,
 } = require('~/models');
 const { User } = require('~/db/models');
 const { logger } = require('@librechat/data-schemas');
@@ -299,6 +303,139 @@ const getGroupStatsHandler = async (req, res) => {
   }
 };
 
+/**
+ * Get available users for group assignment (Entra ID only)
+ */
+const getAvailableUsersHandler = async (req, res) => {
+  try {
+    const { search } = req.query;
+    
+    const filter = {};
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
+    
+    const users = await getAvailableUsers(filter);
+    
+    res.status(200).json({
+      success: true,
+      data: users,
+    });
+  } catch (error) {
+    logger.error('Error fetching available users:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch available users',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Get group members
+ */
+const getGroupMembersHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const members = await getGroupMembers(id);
+    
+    res.status(200).json({
+      success: true,
+      data: members,
+    });
+  } catch (error) {
+    logger.error('Error fetching group members:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch group members',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Add user to group
+ */
+const addUserToGroupHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required',
+      });
+    }
+    
+    const updatedGroup = await addUserToGroup(id, userId);
+    
+    res.status(200).json({
+      success: true,
+      message: 'User added to group successfully',
+      data: updatedGroup,
+    });
+  } catch (error) {
+    logger.error('Error adding user to group:', error);
+    
+    if (error.message.includes('User not found')) {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    
+    if (error.message.includes('Group not found')) {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Failed to add user to group',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Remove user from group
+ */
+const removeUserFromGroupHandler = async (req, res) => {
+  try {
+    const { id, userId } = req.params;
+    
+    const updatedGroup = await removeUserFromGroup(id, userId);
+    
+    res.status(200).json({
+      success: true,
+      message: 'User removed from group successfully',
+      data: updatedGroup,
+    });
+  } catch (error) {
+    logger.error('Error removing user from group:', error);
+    
+    if (error.message.includes('Group not found')) {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Failed to remove user from group',
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getGroupsHandler,
   getGroupHandler,
@@ -306,4 +443,8 @@ module.exports = {
   updateGroupHandler,
   deleteGroupHandler,
   getGroupStatsHandler,
+  getAvailableUsersHandler,
+  getGroupMembersHandler,
+  addUserToGroupHandler,
+  removeUserFromGroupHandler,
 };

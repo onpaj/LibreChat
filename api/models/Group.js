@@ -393,6 +393,161 @@ const getGroupStats = async () => {
   }
 };
 
+/**
+ * Get users available for group membership (Entra ID users only)
+ * @param {Object} filter - MongoDB filter object
+ * @returns {Promise<Array>} Available users
+ */
+const getAvailableUsers = async (filter = {}) => {
+  try {
+    const models = require('~/db/models');
+    const { User } = models;
+    
+    if (!User) {
+      logger.warn('User model not available, returning empty result');
+      return [];
+    }
+
+    // Only get Entra ID users (openid provider)
+    const entraFilter = {
+      provider: 'openid',
+      ...filter,
+    };
+
+    const users = await User.find(entraFilter, {
+      _id: 1,
+      name: 1,
+      email: 1,
+      avatar: 1,
+      provider: 1,
+    }).lean();
+
+    return users;
+  } catch (error) {
+    logger.error('Error getting available users:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get group members
+ * @param {string} groupId - Group ID
+ * @returns {Promise<Array>} Group members
+ */
+const getGroupMembers = async (groupId) => {
+  try {
+    const models = require('~/db/models');
+    const { Group, User } = models;
+    
+    if (!Group || !User) {
+      logger.warn('Required models not available, returning empty result');
+      return [];
+    }
+
+    const group = await Group.findById(groupId).populate({
+      path: 'members',
+      select: 'name email avatar provider',
+      match: { provider: 'openid' } // Only Entra ID users
+    }).lean();
+
+    return group ? group.members || [] : [];
+  } catch (error) {
+    logger.error('Error getting group members:', error);
+    throw error;
+  }
+};
+
+/**
+ * Add user to group
+ * @param {string} groupId - Group ID
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} Updated group
+ */
+const addUserToGroup = async (groupId, userId) => {
+  try {
+    const models = require('~/db/models');
+    const { Group, User } = models;
+    
+    if (!Group || !User) {
+      logger.warn('Required models not available');
+      throw new Error('Required models not available');
+    }
+
+    // Verify user exists and is Entra ID user
+    const user = await User.findOne({ _id: userId, provider: 'openid' });
+    if (!user) {
+      throw new Error('User not found or not an Entra ID user');
+    }
+
+    // Add user to group (avoid duplicates)
+    const updatedGroup = await Group.findByIdAndUpdate(
+      groupId,
+      { $addToSet: { members: userId } },
+      { new: true, runValidators: true }
+    ).populate({
+      path: 'members',
+      select: 'name email avatar provider',
+      match: { provider: 'openid' }
+    });
+
+    if (!updatedGroup) {
+      throw new Error('Group not found');
+    }
+
+    // Update memberCount
+    await Group.findByIdAndUpdate(groupId, {
+      memberCount: updatedGroup.members.length
+    });
+
+    return updatedGroup;
+  } catch (error) {
+    logger.error('Error adding user to group:', error);
+    throw error;
+  }
+};
+
+/**
+ * Remove user from group
+ * @param {string} groupId - Group ID
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} Updated group
+ */
+const removeUserFromGroup = async (groupId, userId) => {
+  try {
+    const models = require('~/db/models');
+    const { Group } = models;
+    
+    if (!Group) {
+      logger.warn('Group model not available');
+      throw new Error('Group model not available');
+    }
+
+    const updatedGroup = await Group.findByIdAndUpdate(
+      groupId,
+      { $pull: { members: userId } },
+      { new: true, runValidators: true }
+    ).populate({
+      path: 'members',
+      select: 'name email avatar provider',
+      match: { provider: 'openid' }
+    });
+
+    if (!updatedGroup) {
+      throw new Error('Group not found');
+    }
+
+    // Update memberCount
+    await Group.findByIdAndUpdate(groupId, {
+      memberCount: updatedGroup.members.length
+    });
+
+    return updatedGroup;
+  } catch (error) {
+    logger.error('Error removing user from group:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   getGroups,
   getGroup,
@@ -404,4 +559,8 @@ module.exports = {
   removeTimeWindow,
   getUserGroups,
   getGroupStats,
+  getAvailableUsers,
+  getGroupMembers,
+  addUserToGroup,
+  removeUserFromGroup,
 };

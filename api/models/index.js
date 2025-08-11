@@ -22,6 +22,10 @@ const {
   removeTimeWindow,
   getUserGroups,
   getGroupStats,
+  getAvailableUsers,
+  getGroupMembers,
+  addUserToGroup,
+  removeUserFromGroup,
 } = require('./Group');
 const {
   getMessage,
@@ -56,6 +60,10 @@ module.exports = {
   removeTimeWindow,
   getUserGroups,
   getGroupStats,
+  getAvailableUsers,
+  getGroupMembers,
+  addUserToGroup,
+  removeUserFromGroup,
 
   getMessage,
   getMessages,
