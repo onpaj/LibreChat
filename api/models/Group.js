@@ -1,0 +1,407 @@
+const { logger } = require('@librechat/data-schemas');
+
+/**
+ * Get groups with filtering and pagination
+ * @param {Object} filter - MongoDB filter object
+ * @param {Object} options - Query options (pagination, sorting, population)
+ * @returns {Promise<Object>} Paginated groups result
+ */
+const getGroups = async (filter = {}, options = {}) => {
+  try {
+    const models = require('~/db/models');
+    const { Group } = models;
+    
+    // Check if Group model is available
+    if (!Group) {
+      logger.warn('Group model not available, returning empty result');
+      return {
+        groups: [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 0,
+          totalItems: 0,
+          itemsPerPage: 10,
+        },
+      };
+    }
+
+    const {
+      page = 1,
+      limit = 10,
+      sort = { name: 1 },
+      populate = [],
+    } = options;
+
+    const skip = (page - 1) * limit;
+    
+    const [groups, total] = await Promise.all([
+      Group.find(filter)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .populate(populate)
+        .lean(),
+      Group.countDocuments(filter),
+    ]);
+
+    return {
+      groups,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: limit,
+      },
+    };
+  } catch (error) {
+    logger.error('Error in getGroups:', error);
+    throw new Error('Failed to fetch groups');
+  }
+};
+
+/**
+ * Get single group by filter
+ * @param {Object} filter - MongoDB filter object
+ * @param {Object} options - Query options
+ * @returns {Promise<Object|null>} Group document or null
+ */
+const getGroup = async (filter, options = {}) => {
+  try {
+    const models = require('~/db/models');
+    const { Group } = models;
+    
+    // Check if Group model is available
+    if (!Group) {
+      logger.warn('Group model not available, returning null');
+      return null;
+    }
+
+    const { populate = [], lean = true } = options;
+
+    let query = Group.findOne(filter);
+    
+    if (populate.length > 0) {
+      query = query.populate(populate);
+    }
+    
+    if (lean) {
+      query = query.lean();
+    }
+
+    return await query.exec();
+  } catch (error) {
+    logger.error('Error in getGroup:', error);
+    throw new Error('Failed to fetch group');
+  }
+};
+
+/**
+ * Create new group
+ * @param {Object} groupData - Group data object
+ * @returns {Promise<Object>} Created group document
+ */
+const createGroup = async (groupData) => {
+  try {
+    const models = require('~/db/models');
+    const { Group } = models;
+    
+    // Check if Group model is available
+    if (!Group) {
+      logger.warn('Group model not available, cannot create group');
+      throw new Error('Group model not available');
+    }
+    
+    const group = new Group(groupData);
+    const savedGroup = await group.save();
+    
+    // Populate created group
+    return await Group.findById(savedGroup._id)
+      .populate([
+        { path: 'createdBy', select: 'name email' },
+      ])
+      .lean();
+  } catch (error) {
+    logger.error('Error in createGroup:', error);
+    if (error.code === 11000) {
+      throw new Error('Group with this name already exists');
+    }
+    throw new Error('Failed to create group');
+  }
+};
+
+/**
+ * Update group by filter
+ * @param {Object} filter - MongoDB filter object
+ * @param {Object} updateData - Data to update
+ * @param {Object} options - Update options
+ * @returns {Promise<Object|null>} Updated group document
+ */
+const updateGroup = async (filter, updateData, options = {}) => {
+  try {
+    const models = require('~/db/models');
+    const { Group } = models;
+    
+    // Check if Group model is available
+    if (!Group) {
+      logger.warn('Group model not available');
+      throw new Error('Group model not available');
+    }
+    
+    const updatedGroup = await Group.findOneAndUpdate(
+      filter,
+      { $set: updateData },
+      { new: true, runValidators: true, ...options }
+    )
+      .populate([
+        { path: 'createdBy', select: 'name email' },
+        { path: 'updatedBy', select: 'name email' },
+      ])
+      .lean();
+
+    return updatedGroup;
+  } catch (error) {
+    logger.error('Error in updateGroup:', error);
+    if (error.code === 11000) {
+      throw new Error('Group with this name already exists');
+    }
+    throw new Error('Failed to update group');
+  }
+};
+
+/**
+ * Delete group by filter
+ * @param {Object} filter - MongoDB filter object
+ * @returns {Promise<boolean>} Success status
+ */
+const deleteGroup = async (filter) => {
+  try {
+    const models = require('~/db/models');
+    const { Group } = models;
+    
+    // Check if Group model is available
+    if (!Group) {
+      logger.warn('Group model not available');
+      throw new Error('Group model not available');
+    }
+    
+    const result = await Group.deleteOne(filter);
+    return result.deletedCount > 0;
+  } catch (error) {
+    logger.error('Error in deleteGroup:', error);
+    throw new Error('Failed to delete group');
+  }
+};
+
+/**
+ * Add time window to group
+ * @param {string} groupId - Group ID
+ * @param {Object} timeWindowData - Time window data
+ * @returns {Promise<Object>} Updated group document
+ */
+const addTimeWindow = async (groupId, timeWindowData) => {
+  try {
+    const models = require('~/db/models');
+    const { Group } = models;
+    
+    // Check if Group model is available
+    if (!Group) {
+      logger.warn('Group model not available');
+      throw new Error('Group model not available');
+    }
+    
+    const updatedGroup = await Group.findByIdAndUpdate(
+      groupId,
+      { 
+        $push: { 
+          timeWindows: {
+            ...timeWindowData,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }
+        }
+      },
+      { new: true, runValidators: true }
+    ).lean();
+
+    return updatedGroup;
+  } catch (error) {
+    logger.error('Error in addTimeWindow:', error);
+    throw new Error('Failed to add time window');
+  }
+};
+
+/**
+ * Update time window in group
+ * @param {string} groupId - Group ID
+ * @param {string} timeWindowId - Time window ID
+ * @param {Object} updateData - Data to update
+ * @returns {Promise<Object>} Updated group document
+ */
+const updateTimeWindow = async (groupId, timeWindowId, updateData) => {
+  try {
+    const models = require('~/db/models');
+    const { Group } = models;
+    
+    // Check if Group model is available
+    if (!Group) {
+      logger.warn('Group model not available');
+      throw new Error('Group model not available');
+    }
+    
+    const updatedGroup = await Group.findOneAndUpdate(
+      { _id: groupId, 'timeWindows._id': timeWindowId },
+      { 
+        $set: {
+          'timeWindows.$.name': updateData.name,
+          'timeWindows.$.windowType': updateData.windowType,
+          'timeWindows.$.startTime': updateData.startTime,
+          'timeWindows.$.endTime': updateData.endTime,
+          'timeWindows.$.daysOfWeek': updateData.daysOfWeek,
+          'timeWindows.$.startDate': updateData.startDate,
+          'timeWindows.$.endDate': updateData.endDate,
+          'timeWindows.$.timezone': updateData.timezone,
+          'timeWindows.$.isActive': updateData.isActive,
+          'timeWindows.$.updatedAt': new Date(),
+        }
+      },
+      { new: true, runValidators: true }
+    ).lean();
+
+    return updatedGroup;
+  } catch (error) {
+    logger.error('Error in updateTimeWindow:', error);
+    throw new Error('Failed to update time window');
+  }
+};
+
+/**
+ * Remove time window from group
+ * @param {string} groupId - Group ID
+ * @param {string} timeWindowId - Time window ID
+ * @returns {Promise<Object>} Updated group document
+ */
+const removeTimeWindow = async (groupId, timeWindowId) => {
+  try {
+    const models = require('~/db/models');
+    const { Group } = models;
+    
+    // Check if Group model is available
+    if (!Group) {
+      logger.warn('Group model not available');
+      throw new Error('Group model not available');
+    }
+    
+    const updatedGroup = await Group.findByIdAndUpdate(
+      groupId,
+      { $pull: { timeWindows: { _id: timeWindowId } } },
+      { new: true }
+    ).lean();
+
+    return updatedGroup;
+  } catch (error) {
+    logger.error('Error in removeTimeWindow:', error);
+    throw new Error('Failed to remove time window');
+  }
+};
+
+/**
+ * Get groups by user membership
+ * @param {string} userId - User ID
+ * @param {Object} options - Query options
+ * @returns {Promise<Array>} User's groups
+ */
+const getUserGroups = async (userId, options = {}) => {
+  try {
+    const { User } = require('~/db/models');
+    const { lean = true } = options;
+
+    let query = User.findById(userId)
+      .select('groupMemberships')
+      .populate({
+        path: 'groupMemberships.groupId',
+        select: 'name description isActive timeWindows memberCount',
+        match: { isActive: true },
+      });
+
+    if (lean) {
+      query = query.lean();
+    }
+
+    const user = await query.exec();
+    
+    if (!user) {
+      return [];
+    }
+
+    return user.groupMemberships
+      .filter(membership => membership.groupId) // Filter out null refs
+      .map(membership => ({
+        ...membership.groupId,
+        assignedAt: membership.assignedAt,
+        assignedBy: membership.assignedBy,
+      }));
+  } catch (error) {
+    logger.error('Error in getUserGroups:', error);
+    throw new Error('Failed to fetch user groups');
+  }
+};
+
+/**
+ * Get group statistics
+ * @returns {Promise<Object>} Group statistics
+ */
+const getGroupStats = async () => {
+  try {
+    const models = require('~/db/models');
+    const { Group } = models;
+    
+    // Check if Group model is available
+    if (!Group) {
+      logger.warn('Group model not available');
+      throw new Error('Group model not available');
+    }
+    
+    const [totalGroups, activeGroups, groupsWithTimeWindows] = await Promise.all([
+      Group.countDocuments({}),
+      Group.countDocuments({ isActive: true }),
+      Group.countDocuments({ 'timeWindows.0': { $exists: true } })
+    ]);
+
+    // Calculate total members by aggregating across all groups
+    const memberStats = await Group.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalMembers: { $sum: '$memberCount' },
+          avgMembersPerGroup: { $avg: '$memberCount' }
+        }
+      }
+    ]);
+
+    const stats = memberStats[0] || { totalMembers: 0, avgMembersPerGroup: 0 };
+
+    return {
+      totalGroups,
+      activeGroups,
+      totalMembers: stats.totalMembers,
+      averageMembersPerGroup: Math.round(stats.avgMembersPerGroup * 10) / 10,
+      groupsWithTimeWindows
+    };
+  } catch (error) {
+    logger.error('Error in getGroupStats:', error);
+    throw new Error('Failed to fetch group statistics');
+  }
+};
+
+module.exports = {
+  getGroups,
+  getGroup,
+  createGroup,
+  updateGroup,
+  deleteGroup,
+  addTimeWindow,
+  updateTimeWindow,
+  removeTimeWindow,
+  getUserGroups,
+  getGroupStats,
+};

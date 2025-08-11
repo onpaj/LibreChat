@@ -5,6 +5,11 @@ import {
   CreatePromptForm,
   EmptyPromptPreview,
 } from '~/components/Prompts';
+import {
+  GroupsView,
+  GroupForm,
+  EmptyGroupPreview,
+} from '~/components/Groups';
 import DashboardRoute from './Layouts/Dashboard';
 
 const dashboardRoutes = {
@@ -73,8 +78,26 @@ const dashboardRoutes = {
       ],
     },
     {
+      path: 'groups/*',
+      element: <GroupsView />,
+      children: [
+        {
+          index: true,
+          element: <EmptyGroupPreview />,
+        },
+        {
+          path: 'new',
+          element: <GroupForm />,
+        },
+        {
+          path: ':groupId',
+          element: <GroupForm />,
+        },
+      ],
+    },
+    {
       path: '*',
-      element: <Navigate to="/d/files" replace={true} />,
+      element: <Navigate to="/d/prompts" replace={true} />,
     },
   ],
 };

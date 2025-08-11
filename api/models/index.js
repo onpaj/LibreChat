@@ -12,6 +12,18 @@ const {
   updateFileUsage,
 } = require('./File');
 const {
+  getGroups,
+  getGroup,
+  createGroup,
+  updateGroup,
+  deleteGroup,
+  addTimeWindow,
+  updateTimeWindow,
+  removeTimeWindow,
+  getUserGroups,
+  getGroupStats,
+} = require('./Group');
+const {
   getMessage,
   getMessages,
   saveMessage,
@@ -33,6 +45,17 @@ module.exports = {
   deleteFiles,
   getFiles,
   updateFileUsage,
+
+  getGroups,
+  getGroup,
+  createGroup,
+  updateGroup,
+  deleteGroup,
+  addTimeWindow,
+  updateTimeWindow,
+  removeTimeWindow,
+  getUserGroups,
+  getGroupStats,
 
   getMessage,
   getMessages,
