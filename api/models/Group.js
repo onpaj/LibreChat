@@ -437,20 +437,23 @@ const getAvailableUsers = async (filter = {}) => {
 const getGroupMembers = async (groupId) => {
   try {
     const models = require('~/db/models');
-    const { Group, User } = models;
+    const { User } = models;
     
-    if (!Group || !User) {
-      logger.warn('Required models not available, returning empty result');
+    if (!User) {
+      logger.warn('User model not available, returning empty result');
       return [];
     }
 
-    const group = await Group.findById(groupId).populate({
-      path: 'members',
-      select: 'name email avatar provider',
-      match: { provider: 'openid' } // Only Entra ID users
-    }).lean();
+    // Find all users who have this group in their groupMemberships
+    const members = await User.find(
+      { 
+        'groupMemberships.groupId': groupId,
+        provider: 'openid' // Only Entra ID users
+      },
+      'name email avatar provider'
+    ).lean();
 
-    return group ? group.members || [] : [];
+    return members || [];
   } catch (error) {
     logger.error('Error getting group members:', error);
     throw error;
@@ -461,9 +464,10 @@ const getGroupMembers = async (groupId) => {
  * Add user to group
  * @param {string} groupId - Group ID
  * @param {string} userId - User ID
- * @returns {Promise<Object>} Updated group
+ * @param {string} assignedBy - ID of user who is assigning
+ * @returns {Promise<Object>} Updated user with group membership
  */
-const addUserToGroup = async (groupId, userId) => {
+const addUserToGroup = async (groupId, userId, assignedBy = null) => {
   try {
     const models = require('~/db/models');
     const { Group, User } = models;
@@ -473,33 +477,48 @@ const addUserToGroup = async (groupId, userId) => {
       throw new Error('Required models not available');
     }
 
+    // Verify group exists
+    const group = await Group.findById(groupId);
+    if (!group) {
+      throw new Error('Group not found');
+    }
+
     // Verify user exists and is Entra ID user
     const user = await User.findOne({ _id: userId, provider: 'openid' });
     if (!user) {
       throw new Error('User not found or not an Entra ID user');
     }
 
-    // Add user to group (avoid duplicates)
-    const updatedGroup = await Group.findByIdAndUpdate(
-      groupId,
-      { $addToSet: { members: userId } },
-      { new: true, runValidators: true }
-    ).populate({
-      path: 'members',
-      select: 'name email avatar provider',
-      match: { provider: 'openid' }
-    });
-
-    if (!updatedGroup) {
-      throw new Error('Group not found');
+    // Check if user is already in group
+    const existingMembership = user.groupMemberships?.find(
+      membership => membership.groupId.toString() === groupId
+    );
+    if (existingMembership) {
+      throw new Error('User is already a member of this group');
     }
 
-    // Update memberCount
-    await Group.findByIdAndUpdate(groupId, {
-      memberCount: updatedGroup.members.length
-    });
+    // Add group membership to user
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { 
+        $push: { 
+          groupMemberships: {
+            groupId: groupId,
+            assignedAt: new Date(),
+            assignedBy: assignedBy || userId
+          }
+        }
+      },
+      { new: true }
+    );
 
-    return updatedGroup;
+    // Update group member count
+    const memberCount = await User.countDocuments({
+      'groupMemberships.groupId': groupId
+    });
+    await Group.findByIdAndUpdate(groupId, { memberCount });
+
+    return { user: updatedUser, group };
   } catch (error) {
     logger.error('Error adding user to group:', error);
     throw error;
@@ -510,38 +529,40 @@ const addUserToGroup = async (groupId, userId) => {
  * Remove user from group
  * @param {string} groupId - Group ID
  * @param {string} userId - User ID
- * @returns {Promise<Object>} Updated group
+ * @returns {Promise<Object>} Updated user
  */
 const removeUserFromGroup = async (groupId, userId) => {
   try {
     const models = require('~/db/models');
-    const { Group } = models;
+    const { Group, User } = models;
     
-    if (!Group) {
-      logger.warn('Group model not available');
-      throw new Error('Group model not available');
+    if (!Group || !User) {
+      logger.warn('Required models not available');
+      throw new Error('Required models not available');
     }
 
-    const updatedGroup = await Group.findByIdAndUpdate(
-      groupId,
-      { $pull: { members: userId } },
-      { new: true, runValidators: true }
-    ).populate({
-      path: 'members',
-      select: 'name email avatar provider',
-      match: { provider: 'openid' }
-    });
+    // Remove group membership from user
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { 
+        $pull: { 
+          groupMemberships: { groupId: groupId }
+        }
+      },
+      { new: true }
+    );
 
-    if (!updatedGroup) {
-      throw new Error('Group not found');
+    if (!updatedUser) {
+      throw new Error('User not found');
     }
 
-    // Update memberCount
-    await Group.findByIdAndUpdate(groupId, {
-      memberCount: updatedGroup.members.length
+    // Update group member count
+    const memberCount = await User.countDocuments({
+      'groupMemberships.groupId': groupId
     });
+    await Group.findByIdAndUpdate(groupId, { memberCount });
 
-    return updatedGroup;
+    return updatedUser;
   } catch (error) {
     logger.error('Error removing user from group:', error);
     throw error;

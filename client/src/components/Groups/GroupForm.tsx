@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Save, ArrowLeft, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Button, Input, Label, Textarea } from '@librechat/client';
 import { useCreateGroupMutation, useUpdateGroupMutation, useDeleteGroupMutation, useGetGroupQuery } from './hooks';
+import GroupMembersSection from './GroupMembersSection';
 import type { CreateGroupRequest, UpdateGroupRequest } from './types';
 
 export default function GroupForm() {
@@ -245,6 +246,13 @@ export default function GroupForm() {
             </Button>
           </div>
         </form>
+
+        {/* Member Management Section */}
+        {isEditing && groupId && (
+          <div className="mt-8">
+            <GroupMembersSection groupId={groupId} isActive={formData.isActive} />
+          </div>
+        )}
 
         {/* Additional Information */}
         {isEditing && groupData?.success && (

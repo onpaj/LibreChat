@@ -364,6 +364,7 @@ const addUserToGroupHandler = async (req, res) => {
   try {
     const { id } = req.params;
     const { userId } = req.body;
+    const assignedBy = req.user?.id || '507f1f77bcf86cd799439011'; // Use real user ID when available
     
     if (!userId) {
       return res.status(400).json({
@@ -372,12 +373,12 @@ const addUserToGroupHandler = async (req, res) => {
       });
     }
     
-    const updatedGroup = await addUserToGroup(id, userId);
+    const result = await addUserToGroup(id, userId, assignedBy);
     
     res.status(200).json({
       success: true,
       message: 'User added to group successfully',
-      data: updatedGroup,
+      data: result,
     });
   } catch (error) {
     logger.error('Error adding user to group:', error);
@@ -411,12 +412,12 @@ const removeUserFromGroupHandler = async (req, res) => {
   try {
     const { id, userId } = req.params;
     
-    const updatedGroup = await removeUserFromGroup(id, userId);
+    const updatedUser = await removeUserFromGroup(id, userId);
     
     res.status(200).json({
       success: true,
       message: 'User removed from group successfully',
-      data: updatedGroup,
+      data: updatedUser,
     });
   } catch (error) {
     logger.error('Error removing user from group:', error);
