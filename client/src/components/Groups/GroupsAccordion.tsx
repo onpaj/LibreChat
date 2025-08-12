@@ -28,8 +28,10 @@ export default function GroupsAccordion() {
 
   const fetchGroups = async () => {
     try {
-      const response = await fetch('http://localhost:3081/api/groups');
+      // Use relative URL to leverage Vite proxy
+      const response = await fetch('/api/groups');
       const data = await response.json();
+      console.log('GroupsAccordion fetch response:', data); // Debug log
       if (data.success && data.data?.groups) {
         setGroups(data.data.groups);
       }

@@ -112,7 +112,8 @@ export default function useSideNavLinks({
       });
     }
 
-    if (user?.role === SystemRoles.ADMIN) {
+    // Temporarily allow all users to access Groups for testing
+    // if (user?.role === SystemRoles.ADMIN) {
       links.push({
         title: 'Group Management',
         label: '',
@@ -120,7 +121,7 @@ export default function useSideNavLinks({
         id: 'groups',
         Component: GroupsAccordion,
       });
-    }
+    // }
 
     if (hasAccessToMemories && hasAccessToReadMemories) {
       links.push({

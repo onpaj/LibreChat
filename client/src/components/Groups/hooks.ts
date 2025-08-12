@@ -25,12 +25,16 @@ const fetchGroups = async (params: GroupsListParams = {}): Promise<GroupsListRes
   const queryString = searchParams.toString();
   const url = queryString ? `${API_BASE}?${queryString}` : API_BASE;
   
+  console.log('fetchGroups DEBUG:', { url, params });
+  
   const response = await fetch(url);
   if (!response.ok) {
+    console.error('fetchGroups ERROR:', response.status, response.statusText);
     throw new Error('Failed to fetch groups');
   }
   
   const data = await response.json();
+  console.log('fetchGroups RESPONSE:', data);
   return data.success ? data.data : data;
 };
 

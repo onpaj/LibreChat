@@ -21,18 +21,19 @@ export default function GroupsView() {
   console.log('Debug - SystemRoles.ADMIN:', SystemRoles.ADMIN);
   console.log('Debug - isAdmin:', isAdmin);
 
-  useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout>;
-    if (!isAdmin) {
-      console.log('Debug - User is not admin, redirecting...');
-      timeoutId = setTimeout(() => {
-        navigate('/c/new');
-      }, 1000);
-    }
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [isAdmin, navigate]);
+  // Temporarily disable redirect for debugging
+  // useEffect(() => {
+  //   let timeoutId: ReturnType<typeof setTimeout>;
+  //   if (!isAdmin) {
+  //     console.log('Debug - User is not admin, redirecting...');
+  //     timeoutId = setTimeout(() => {
+  //       navigate('/c/new');
+  //     }, 1000);
+  //   }
+  //   return () => {
+  //     clearTimeout(timeoutId);
+  //   };
+  // }, [isAdmin, navigate]);
 
   // Temporarily comment out admin check
   // if (!isAdmin) {

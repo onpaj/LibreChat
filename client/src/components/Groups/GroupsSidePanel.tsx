@@ -35,6 +35,16 @@ export default function GroupsSidePanel({ isDetailView }: GroupsSidePanelProps) 
   const groups = groupsData?.groups || [];
   const pagination = groupsData?.pagination;
 
+  // Debug logging
+  console.log('GroupsSidePanel Debug:', {
+    groupsData,
+    groups: groups.length,
+    isLoading,
+    error: error?.message,
+    searchTerm,
+    currentPage
+  });
+
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
