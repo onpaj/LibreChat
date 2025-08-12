@@ -6,7 +6,7 @@ Time-based access control feature that restricts user login access to specific t
 
 ## User Story
 
-**As a system administrator**, I want to configure time-based access restrictions for different user groups so that I can control when users can log into the platform based on organizational policies, security requirements, or operational schedules.
+**As a system administrator**, I want to configure time-based access restrictions for different user groups so that I can control when users can send prompts into the platform based on organizational policies, security requirements, or operational schedules.
 
 ## Epic Breakdown
 
@@ -21,7 +21,7 @@ Time-based access control feature that restricts user login access to specific t
 - Implement time zone support
 
 ### Epic 3: Access Control Logic
-- Implement login time validation
+- Implement prompt time validation
 - Create access control middleware
 - Handle edge cases and overlapping windows
 

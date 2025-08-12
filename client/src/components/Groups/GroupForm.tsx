@@ -4,6 +4,7 @@ import { Save, ArrowLeft, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Button, Input, Label, Textarea } from '@librechat/client';
 import { useCreateGroupMutation, useUpdateGroupMutation, useDeleteGroupMutation, useGetGroupQuery } from './hooks';
 import GroupMembersSection from './GroupMembersSection';
+import TimeWindowManager from './TimeWindowManager';
 import type { CreateGroupRequest, UpdateGroupRequest } from './types';
 
 export default function GroupForm() {
@@ -20,7 +21,7 @@ export default function GroupForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Queries and mutations
-  const { data: groupData, isLoading: loadingGroup } = useGetGroupQuery(groupId || '', {
+  const { data: groupData, isLoading: loadingGroup, refetch } = useGetGroupQuery(groupId || '', {
     enabled: isEditing,
   });
   
@@ -251,6 +252,17 @@ export default function GroupForm() {
         {isEditing && groupId && (
           <div className="mt-8">
             <GroupMembersSection groupId={groupId} isActive={formData.isActive} />
+          </div>
+        )}
+
+        {/* Time Window Management Section */}
+        {isEditing && groupId && groupData?.success && (
+          <div className="mt-8">
+            <TimeWindowManager 
+              groupId={groupId} 
+              timeWindows={groupData.data.timeWindows || []} 
+              onRefresh={() => refetch()}
+            />
           </div>
         )}
 

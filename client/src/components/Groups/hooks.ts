@@ -1,5 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { GroupsListParams, GroupsListResponse, Group, CreateGroupRequest, UpdateGroupRequest, GroupStatsResponse } from './types';
+import type { 
+  GroupsListParams, 
+  GroupsListResponse, 
+  Group, 
+  CreateGroupRequest, 
+  UpdateGroupRequest, 
+  GroupStatsResponse,
+  CreateTimeWindowRequest,
+  UpdateTimeWindowRequest
+} from './types';
 
 // Temporary API functions for testing
 const API_BASE = '/api/groups';
@@ -137,6 +146,84 @@ export const useDeleteGroupMutation = () => {
     onSuccess: (_, groupId) => {
       queryClient.invalidateQueries({ queryKey: ['groups'] });
       queryClient.removeQueries({ queryKey: ['group', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groupStats'] });
+    },
+  });
+};
+
+// Time Window API functions
+const addTimeWindow = async (groupId: string, data: CreateTimeWindowRequest): Promise<{ success: boolean; data: Group; message: string }> => {
+  const response = await fetch(`${API_BASE}/${groupId}/time-windows`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to add time window');
+  }
+  return response.json();
+};
+
+const updateTimeWindow = async (groupId: string, windowId: string, data: UpdateTimeWindowRequest): Promise<{ success: boolean; data: Group; message: string }> => {
+  const response = await fetch(`${API_BASE}/${groupId}/time-windows/${windowId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to update time window');
+  }
+  return response.json();
+};
+
+const removeTimeWindow = async (groupId: string, windowId: string): Promise<{ success: boolean; data: Group; message: string }> => {
+  const response = await fetch(`${API_BASE}/${groupId}/time-windows/${windowId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to remove time window');
+  }
+  return response.json();
+};
+
+// Time Window mutation hooks
+export const useAddTimeWindowMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ groupId, data }: { groupId: string; data: CreateTimeWindowRequest }) =>
+      addTimeWindow(groupId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      queryClient.invalidateQueries({ queryKey: ['groupStats'] });
+    },
+  });
+};
+
+export const useUpdateTimeWindowMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ groupId, windowId, data }: { groupId: string; windowId: string; data: UpdateTimeWindowRequest }) =>
+      updateTimeWindow(groupId, windowId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+    },
+  });
+};
+
+export const useRemoveTimeWindowMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ groupId, windowId }: { groupId: string; windowId: string }) =>
+      removeTimeWindow(groupId, windowId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
       queryClient.invalidateQueries({ queryKey: ['groupStats'] });
     },
   });

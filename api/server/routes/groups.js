@@ -84,4 +84,10 @@ router.post('/:id/members', addUserToGroupHandler);
 router.delete('/:id/members/:userId', removeUserFromGroupHandler);
 // router.post('/:id/members/bulk', requireAdmin, validateBulkGroupAssignment, bulkAddUsersToGroupHandler);
 
+// Time window management endpoints
+router.get('/:id/time-windows', getGroupHandler); // Time windows are included in group data
+router.post('/:id/time-windows', require('~/server/controllers/TimeWindowController.js').addTimeWindowHandler);
+router.put('/:id/time-windows/:windowId', require('~/server/controllers/TimeWindowController.js').updateTimeWindowHandler);
+router.delete('/:id/time-windows/:windowId', require('~/server/controllers/TimeWindowController.js').removeTimeWindowHandler);
+
 module.exports = router;

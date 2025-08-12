@@ -15,16 +15,40 @@ export interface Group {
 export interface TimeWindow {
   _id?: string;
   name: string;
-  windowType: 'recurring' | 'one-time';
+  windowType: 'daily' | 'weekly' | 'date_range' | 'exception';
+  startTime?: string; // HH:MM format
+  endTime?: string;   // HH:MM format
+  daysOfWeek?: number[]; // Array of numbers 0-6 (Sunday-Saturday)
+  startDate?: string; // ISO date string
+  endDate?: string;   // ISO date string
+  timezone?: string;  // IANA timezone identifier
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateTimeWindowRequest {
+  name: string;
+  windowType: 'daily' | 'weekly' | 'date_range' | 'exception';
   startTime?: string;
   endTime?: string;
   daysOfWeek?: number[];
   startDate?: string;
   endDate?: string;
   timezone?: string;
-  isActive: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  isActive?: boolean;
+}
+
+export interface UpdateTimeWindowRequest {
+  name?: string;
+  windowType?: 'daily' | 'weekly' | 'date_range' | 'exception';
+  startTime?: string;
+  endTime?: string;
+  daysOfWeek?: number[];
+  startDate?: string;
+  endDate?: string;
+  timezone?: string;
+  isActive?: boolean;
 }
 
 export interface GroupsListParams {
