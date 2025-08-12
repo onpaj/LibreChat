@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Blocks, MCPIcon, AttachmentIcon } from '@librechat/client';
-import { MessageSquareQuote, ArrowRightToLine, Settings2, Database, Bookmark, Users } from 'lucide-react';
+import { MessageSquareQuote, ArrowRightToLine, Settings2, Database, Bookmark, Users, BarChart3 } from 'lucide-react';
 import {
   isAssistantsEndpoint,
   isAgentsEndpoint,
@@ -18,6 +18,7 @@ import MemoryViewer from '~/components/SidePanel/Memories/MemoryViewer';
 import PanelSwitch from '~/components/SidePanel/Builder/PanelSwitch';
 import PromptsAccordion from '~/components/Prompts/PromptsAccordion';
 import GroupsAccordion from '~/components/Groups/GroupsAccordion';
+import StatisticsAccordion from '~/components/Statistics/StatisticsAccordion';
 import Parameters from '~/components/SidePanel/Parameters/Panel';
 import FilesPanel from '~/components/SidePanel/Files/Panel';
 import MCPPanel from '~/components/SidePanel/MCP/MCPPanel';
@@ -122,6 +123,17 @@ export default function useSideNavLinks({
         Component: GroupsAccordion,
       });
     // }
+
+    // Statistics - Admin only
+    if (user?.role === SystemRoles.ADMIN) {
+      links.push({
+        title: 'Statistics',
+        label: '',
+        icon: BarChart3,
+        id: 'statistics',
+        Component: StatisticsAccordion,
+      });
+    }
 
     if (hasAccessToMemories && hasAccessToReadMemories) {
       links.push({

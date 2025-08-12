@@ -119,6 +119,7 @@ const startServer = async () => {
   app.use('/api/memories', routes.memories);
   app.use('/api/tags', routes.tags);
   app.use('/api/groups', routes.groups);
+  app.use('/api/statistics', routes.statistics);
   app.use('/api/mcp', routes.mcp);
 
   // Add the error controller one more time after all routes

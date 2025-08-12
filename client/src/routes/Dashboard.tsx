@@ -10,6 +10,12 @@ import {
   GroupForm,
   EmptyGroupPreview,
 } from '~/components/Groups';
+import { 
+  UserLeaderboard, 
+  GroupLeaderboard, 
+  GroupStatsDetail, 
+  EmptyStatsPreview 
+} from '~/components/Statistics';
 import DashboardRoute from './Layouts/Dashboard';
 
 const dashboardRoutes = {
@@ -92,6 +98,28 @@ const dashboardRoutes = {
         {
           path: ':groupId',
           element: <GroupForm />,
+        },
+      ],
+    },
+    {
+      path: 'statistics/*',
+      element: <div className="h-screen w-full"><UserLeaderboard /></div>,
+      children: [
+        {
+          index: true,
+          element: <EmptyStatsPreview />,
+        },
+        {
+          path: 'users',
+          element: <UserLeaderboard />,
+        },
+        {
+          path: 'groups',
+          element: <GroupLeaderboard />,
+        },
+        {
+          path: 'groups/:groupId',
+          element: <GroupStatsDetail />,
         },
       ],
     },
