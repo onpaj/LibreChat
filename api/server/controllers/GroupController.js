@@ -1,14 +1,15 @@
 const { SystemRoles } = require('librechat-data-provider');
-const { 
-  getGroups, 
-  getGroup, 
-  createGroup, 
-  updateGroup, 
+const {
+  getGroups,
+  getGroup,
+  createGroup,
+  updateGroup,
   deleteGroup,
   getAvailableUsers,
   getGroupMembers,
   addUserToGroup,
   removeUserFromGroup,
+  removePendingEmail,
 } = require('~/models');
 const { User } = require('~/db/models');
 const { logger } = require('@librechat/data-schemas');
@@ -363,16 +364,35 @@ const getGroupMembersHandler = async (req, res) => {
 const addUserToGroupHandler = async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId } = req.body;
+    let { userId, email } = req.body;
     const assignedBy = req.user?.id || '507f1f77bcf86cd799439011'; // Use real user ID when available
-    
+
+    if (!userId && email) {
+      const models = require('~/db/models');
+      const normalizedEmail = email.trim().toLowerCase();
+      const user = await models.User.findOne(
+        { email: { $regex: new RegExp(`^${normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
+        { _id: 1 },
+      ).lean();
+      if (!user) {
+        // User hasn't logged in yet — store email as pending
+        await models.Group.findByIdAndUpdate(id, { $addToSet: { pendingEmails: normalizedEmail } });
+        return res.status(200).json({
+          success: true,
+          pending: true,
+          message: `${email} will be added automatically when they log in for the first time.`,
+        });
+      }
+      userId = user._id.toString();
+    }
+
     if (!userId) {
       return res.status(400).json({
         success: false,
-        message: 'User ID is required',
+        message: 'User ID or email is required',
       });
     }
-    
+
     const result = await addUserToGroup(id, userId, assignedBy);
     
     res.status(200).json({
@@ -396,7 +416,14 @@ const addUserToGroupHandler = async (req, res) => {
         message: error.message,
       });
     }
-    
+
+    if (error.message && error.message.includes('already a member')) {
+      return res.status(200).json({
+        success: true,
+        message: 'User is already a member of this group',
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Failed to add user to group',
@@ -437,6 +464,20 @@ const removeUserFromGroupHandler = async (req, res) => {
   }
 };
 
+/**
+ * Remove a pending email from a group
+ */
+const removePendingEmailHandler = async (req, res) => {
+  try {
+    const { id, email } = req.params;
+    await removePendingEmail(id, decodeURIComponent(email));
+    res.status(200).json({ success: true });
+  } catch (error) {
+    logger.error('Error removing pending email:', error);
+    res.status(500).json({ success: false, message: 'Failed to remove pending email' });
+  }
+};
+
 module.exports = {
   getGroupsHandler,
   getGroupHandler,
@@ -448,4 +489,5 @@ module.exports = {
   getGroupMembersHandler,
   addUserToGroupHandler,
   removeUserFromGroupHandler,
+  removePendingEmailHandler,
 };
